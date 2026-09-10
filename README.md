@@ -1,36 +1,184 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Service Architecture
 
-## Getting Started
+A small TypeScript project for building a clean, extensible AI service architecture.
 
-First, run the development server:
+The goal is to separate:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- API / Route responsibilities
+- Business logic
+- AI provider communication
+- AI contracts and types
+
+This makes the system easier to test, extend, and replace with different AI providers.
+
+## Current Architecture
+
+```text
+Route
+  │
+  ▼
+AIService
+  │
+  ▼
+AIProvider
+  │
+  ▼
+AI Model / Provider
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Responsibilities
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+#### Route
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The route is responsible only for handling the request and calling the service.
 
-## Learn More
+It should not contain:
 
-To learn more about Next.js, take a look at the following resources:
+- Business logic
+- AI provider logic
+- Validation logic
+- Error-handling logic related to the AI domain
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Example:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```ts
+aiService.ask(request);
+```
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+#### AIService
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`AIService` represents the application's AI business layer.
+
+```ts
+export interface AIService {
+  ask(request: AIRequest): Promise<AIResponse>;
+}
+```
+
+The service should be independent from the specific AI provider.
+
+---
+
+#### AIProvider
+
+`AIProvider` represents the communication layer with an AI model/provider.
+
+```ts
+export interface AIProvider {
+  generate(prompt: string): Promise<string>;
+}
+```
+
+This abstraction allows the underlying provider to be replaced later.
+
+For example:
+
+```text
+AIService
+   │
+   ├── OpenAIProvider
+   │
+   ├── AnthropicProvider
+   │
+   └── LocalAIProvider
+```
+
+The service should not need to know which provider is being used.
+
+## Contracts
+
+### AIRequest
+
+```ts
+interface AIRequest {
+  prompt: string;
+}
+```
+
+Represents the input received by the AI service.
+
+### AIResponse
+
+```ts
+interface AIResponse {
+  answer: string;
+  confidence?: number;
+  sources?: string[];
+}
+```
+
+Represents the normalized response returned by the AI service.
+
+## Current Implementation
+
+The current service implementation is intentionally simple:
+
+```ts
+class AIServiceImplementation implements AIService {
+  async ask(request: AIRequest): Promise<AIResponse> {
+    return {
+      answer: request.prompt,
+    };
+  }
+}
+
+export const aiService: AIService = new AIServiceImplementation();
+```
+
+This is currently a placeholder implementation.
+
+No real AI provider has been connected yet.
+
+## Design Goals
+
+The project will gradually introduce:
+
+- Dependency inversion
+- Provider abstraction
+- Input validation
+- Error handling
+- AI provider integration
+- Testable business logic
+- Replaceable AI providers
+
+The important principle is:
+
+> The business layer should depend on abstractions, not on a specific AI provider.
+
+## Roadmap
+
+```text
+[x] Define AIRequest
+[x] Define AIResponse
+[x] Define AIService contract
+[x] Implement AIService
+[x] Define AIProvider contract
+
+[ ] Implement AIProvider
+[ ] Inject AIProvider into AIService
+[ ] Add validation
+[ ] Add domain-level error handling
+[ ] Connect a real AI model
+[ ] Add Server/API route
+[ ] Add tests
+[ ] Add provider replacement tests
+```
+
+## Project Structure
+
+The target structure will look approximately like:
+
+```text
+src/
+├── services/
+│   └── ai.service.ts
+│
+├── providers/
+│   └── ai.provider.ts
+│
+└── ...
+```
+
+The architecture will evolve as new responsibilities are introduced.
